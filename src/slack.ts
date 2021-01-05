@@ -5,7 +5,7 @@ import {IncomingWebhook, IncomingWebhookResult} from '@slack/webhook'
 
 function jobColor(status: string): string | undefined {
   if (status.toLowerCase() === 'success') return 'good'
-  if (status.toLowerCase() === 'failure') return 'danger'
+  if (status.toLowerCase() === 'failure') return '#f00'
   if (status.toLowerCase() === 'cancelled') return 'warning'
 }
 
@@ -107,43 +107,31 @@ async function send(
     }
   }
 
-  const text = `${
-    `*<${workflowUrl}|Workflow _${workflow}_ ` +
-    `job _${jobName}_ triggered by _${eventName}_ is _${jobStatus}_>* ` +
-    `for <${refUrl}|\`${ref}\`>\n`
-  }${title ? `<${diffUrl}|\`${diffRef}\`> - ${title}` : ''}`
+  let last_step: string = ''
+  if (jobStatus.toLowerCase() == 'failure') {
+    for (const [step, status] of Object.entries(jobSteps)) {
+      if (status.outcome.toLowerCase() == 'failure') {
+        last_step = step
+      }
+    }
+  }
 
-  // add job steps, if provided
-  const checks: string[] = []
-  for (const [step, status] of Object.entries(jobSteps)) {
-    checks.push(`${stepIcon(status.outcome)} ${step}`)
-  }
-  const fields = []
-  if (checks.length) {
-    fields.push({
-      title: 'Job Steps',
-      value: checks.join('\n'),
-      short: false
-    })
-  }
+  const text = `${jobStatus == 'FAILURE' ?  '<!here>' : ''}
+  *${jobStatus}*: <${workflowUrl}|${workflow}> on <${refUrl}|${ref}>
+  Author: <${sender?.html_url}|${sender?.login}>
+  Repo: <${repositoryUrl}|${repositoryName}>
+  ${last_step ? `Step: ${last_step}` : ''}`
 
   const message = {
-    username: 'GitHub Action',
+    username: 'GitHub Actions',
     icon_url: 'https://octodex.github.com/images/original.png',
     channel,
     attachments: [
       {
         fallback: `[GitHub]: [${repositoryName}] ${workflow} ${eventName} ${action ? `${action} ` : ''}${jobStatus}`,
         color: jobColor(jobStatus),
-        author_name: sender?.login,
-        author_link: sender?.html_url,
-        author_icon: sender?.avatar_url,
         mrkdwn_in: ['text' as const],
         text,
-        fields,
-        footer: `<${repositoryUrl}|${repositoryName}> #${runNumber}`,
-        footer_icon: 'https://github.githubassets.com/favicon.ico',
-        ts: ts.toString()
       }
     ]
   }
