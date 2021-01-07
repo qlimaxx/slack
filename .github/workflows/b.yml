@@ -1,4 +1,4 @@
-name: Tests Run button
+name: Bworkflow
 
 on:
   push:
@@ -10,13 +10,10 @@ on:
       run_id:
         description: 'Workflow run ID that triggers the event'
         required: false
-env:
-  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - run: echo ${{ github.event.inputs.repo }}
-      - run: echo ${{ github.event.inputs.run_id }}
+      - uses: actions/checkout@v2
